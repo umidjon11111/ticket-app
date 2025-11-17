@@ -24,7 +24,7 @@ export default function CreateOrderClient({
   // SOCKET INIT
   // ============================
   useEffect(() => {
-    const s = io("http://localhost:5000");
+    const s = io("https://sakura-socket-tr04.onrender.com");
     setSocket(s);
 
     s.emit("join_room", "kassa");

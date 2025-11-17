@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-const URL = "http://localhost:5000";
+const URL = "https://sakura-socket-tr04.onrender.com";
 
 // 🔥 Bitta global socket instance
 const socket = io(URL, {
