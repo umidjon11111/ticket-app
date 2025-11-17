@@ -24,7 +24,9 @@ export default function CreateOrderClient({
   // SOCKET INIT
   // ============================
   useEffect(() => {
-    const s = io("https://sakura-socket-tr04.onrender.com");
+    const s = io("https://sakura-socket-tr04.onrender.com", {
+      transports: ["websocket"], // MUHIM
+    });
     setSocket(s);
 
     s.emit("join_room", "kassa");
@@ -40,11 +42,16 @@ export default function CreateOrderClient({
   }, []);
 
   // ============================
+  // CATEGORY FILTER
+  // ============================
   const filteredProducts =
     activeCategory === "all"
       ? products
       : products.filter((p: any) => p.category?.name === activeCategory);
 
+  // ============================
+  // CART FUNCTIONS
+  // ============================
   const addToCart = (product: any) => {
     setCart((prev) => {
       const exists = prev.find((p) => p._id === product._id);
@@ -57,101 +64,20 @@ export default function CreateOrderClient({
     });
   };
 
-  interface CartItem {
-    _id: string;
-    name: string;
-    qty: number;
-    price: number;
-    category?: { name: string };
-    image?: string;
-  }
-
-  interface Customer {
-    name: string;
-    phone: string;
-    address: string;
-  }
-
-  interface PrinterPayload {
-    check_number: number;
-    date_time: string;
-    items: Array<{
-      name: string;
-      quantity: number;
-      total_price: number;
-    }>;
-    subtotal: number;
-    total: number;
-    orderType: string;
-    payment_type: string;
-    customer: Customer | null;
-  }
-
-  const minusFromCart = (id: string): void => {
-    setCart((prev: CartItem[]) =>
+  const minusFromCart = (id: string) => {
+    setCart((prev) =>
       prev
-        .map((p: CartItem) => (p._id === id ? { ...p, qty: p.qty - 1 } : p))
-        .filter((p: CartItem) => p.qty > 0)
+        .map((p) => (p._id === id ? { ...p, qty: p.qty - 1 } : p))
+        .filter((p) => p.qty > 0)
     );
   };
 
-  const total: number = cart.reduce(
-    (s: number, i: CartItem) => s + i.qty * i.price,
-    0
-  );
+  const total = cart.reduce((s, i) => s + i.qty * i.price, 0);
 
   // ============================
-  // PRINTER PAYLOAD (faqat cart'dan)
+  // CLEAR FORM
   // ============================
-  const sendToPrinter = async (
-    cartData: CartItem[],
-    orderType: string,
-    name: string,
-    phone: string,
-    address: string
-  ): Promise<void> => {
-    if (!cartData || cartData.length === 0) {
-      console.error("❌ CART bo'sh");
-      return;
-    }
-
-    const payload: PrinterPayload = {
-      check_number: Date.now(),
-      date_time: new Date().toLocaleString("uz-UZ"),
-
-      items: cartData.map((item: CartItem) => ({
-        name: item.name,
-        quantity: item.qty,
-        total_price: item.qty * item.price,
-      })),
-
-      subtotal: cartData.reduce(
-        (s: number, i: CartItem) => s + i.qty * i.price,
-        0
-      ),
-      total: cartData.reduce(
-        (s: number, i: CartItem) => s + i.qty * i.price,
-        0
-      ),
-
-      orderType,
-      payment_type: "naqd",
-
-      customer:
-        orderType === "Dastavka" || orderType === "Saboy"
-          ? { name, phone, address }
-          : null,
-    };
-
-    await fetch("https://192.168.1.4:8080/print", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  };
-
-  // ============================
-  const clearForm = (): void => {
+  const clearForm = () => {
     setCart([]);
     setCustomerName("");
     setPhone("");
@@ -160,7 +86,9 @@ export default function CreateOrderClient({
   };
 
   // ============================
-  const handleSubmit = (): void => {
+  // HANDLE SUBMIT
+  // ============================
+  const handleSubmit = () => {
     if (!socket) return alert("Serverga ulanilmadi!");
     if (sending) return;
     if (cart.length === 0) return alert("Mahsulot qo‘shing!");
@@ -186,18 +114,19 @@ export default function CreateOrderClient({
       },
     };
 
-    // 🔥 1) Orderni serverga yuborish
+    // 🔥 Faqat GLOBAL SOCKET SERVERGA yuboriladi
     socket.emit("create_order", payload);
 
-    // 🔥 2) Printerga DARHOL jo‘natish
-    sendToPrinter(cart, orderType, customerName, phone, address);
+    // ❌ Local printer fetch YO‘Q
+    // ❌ sendToPrinter YO‘Q (brauzer baribir bloklaydi)
 
-    // 🔥 3) UI tozalash
+    // UI tozalash
     clearForm();
-
     setSending(true);
   };
 
+  // ============================
+  // UI
   // ============================
   return (
     <div className="flex flex-col lg:flex-row h-screen p-4 md:p-6 gap-6">
