@@ -23,42 +23,61 @@ interface Props {
 
 export default function CategoriesClient({ initialCategories }: Props) {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
+
+  // Editing states
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState<string>("");
 
-  // ✅ Yangi kategoriya qo‘shish
+  // Loaders
+  const [addLoading, setAddLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState<string | null>(null);
+
+  // === Add Category ===
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    setAddLoading(true);
     const formData = new FormData(e.currentTarget);
+
     await addCategory(formData);
     setCategories(await getCategories());
+
+    setAddLoading(false);
     e.currentTarget.reset();
   };
 
-  // ✅ Kategoriyani o‘chirish
+  // === Delete ===
   const handleDelete = async (id: string) => {
+    setDeleteLoading(id);
     await deleteCategory(id);
+
     setCategories(await getCategories());
+    setDeleteLoading(null);
   };
 
-  // ✅ Tahrirlashni boshlash
+  // === Start edit ===
   const startEdit = (cat: Category) => {
     setEditingId(cat._id);
     setEditName(cat.name);
   };
 
-  // ✅ Tahrirlashni saqlash
+  // === Save edit ===
   const handleEditSave = async (id: string) => {
+    setEditLoading(id);
+
     const formData = new FormData();
     formData.append("name", editName);
 
     await EditCategory(id, formData);
     setCategories(await getCategories());
+
     setEditingId(null);
     setEditName("");
+    setEditLoading(null);
   };
 
-  // ✅ Tahrirlashni bekor qilish
+  // === Cancel edit ===
   const cancelEdit = () => {
     setEditingId(null);
     setEditName("");
@@ -66,61 +85,66 @@ export default function CategoriesClient({ initialCategories }: Props) {
 
   return (
     <div className="p-6 space-y-6 w-full">
-      {/* === Kategoriya qo‘shish formi === */}
+      {/* ADD CATEGORY FORM */}
       <Card>
         <CardHeader>
           <CardTitle>📦 Add Category</CardTitle>
         </CardHeader>
+
         <CardContent>
           <form
             onSubmit={handleSubmit}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
           >
             <Input name="name" placeholder="Category name" required />
-            <Button type="submit">Add Category</Button>
+
+            <Button type="submit" disabled={addLoading}>
+              {addLoading ? "Saving..." : "Add Category"}
+            </Button>
           </form>
         </CardContent>
       </Card>
 
-      {/* === Kategoriya ro‘yxati === */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+      {/* CATEGORY LIST */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {categories.map((cat) => (
-          <Card key={cat._id} className="sm:w-[300px]">
+          <Card key={cat._id} className="p-2">
             <CardHeader>
               {editingId === cat._id ? (
                 <Input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full"
                 />
               ) : (
                 <CardTitle>{cat.name}</CardTitle>
               )}
             </CardHeader>
+
             <CardContent>
-              <div className="flex justify-end mt-3">
+              <div className="flex justify-end mt-3 gap-2">
                 {editingId === cat._id ? (
                   <>
                     <Button
-                      className="mr-2"
                       onClick={() => handleEditSave(cat._id)}
+                      disabled={editLoading === cat._id}
                     >
-                      Save
+                      {editLoading === cat._id ? "Saving..." : "Save"}
                     </Button>
+
                     <Button variant="outline" onClick={cancelEdit}>
                       Cancel
                     </Button>
                   </>
                 ) : (
                   <>
-                    <Button className="mr-2" onClick={() => startEdit(cat)}>
-                      Edit
-                    </Button>
+                    <Button onClick={() => startEdit(cat)}>Edit</Button>
+
                     <Button
                       variant="destructive"
                       onClick={() => handleDelete(cat._id)}
+                      disabled={deleteLoading === cat._id}
                     >
-                      Delete
+                      {deleteLoading === cat._id ? "Deleting..." : "Delete"}
                     </Button>
                   </>
                 )}

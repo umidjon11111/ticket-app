@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, ChangeEvent } from "react";
+import { useState, FormEvent } from "react";
 import {
   deleteProduct,
   toggleAvailability,
@@ -46,8 +46,9 @@ export default function ProductsClient({
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
-  const [imageBase64, setImageBase64] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleDelete = async (id: string) => {
     await deleteProduct(id);
@@ -59,63 +60,53 @@ export default function ProductsClient({
     setProducts(await getProducts());
   };
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImageBase64(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!selectedCategory) {
-      alert("Please select a category first.");
-      return;
-    }
+    if (!selectedCategory) return alert("Please select a category.");
+
+    setLoading(true);
 
     const formData = new FormData();
     formData.append("name", name);
     formData.append("price", price);
-    formData.append("image", imageBase64);
+    formData.append("image", imageUrl); // URL yuboriladi
     formData.append("category", selectedCategory);
 
     await addProduct(formData);
     setProducts(await getProducts());
 
+    // reset
     setName("");
     setPrice("");
-    setImageBase64("");
+    setImageUrl("");
     setSelectedCategory("");
+    setLoading(false);
   };
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-8 w-full max-w-7xl mx-auto">
-      {/* === Form === */}
+      {/* === FORM === */}
       <Card className="shadow-lg border border-border/40 bg-card/60 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-xl sm:text-2xl font-semibold flex items-center gap-2">
             🛒 Add New Product
           </CardTitle>
         </CardHeader>
+
         <CardContent>
           <form
             onSubmit={handleSubmit}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
           >
             <Input
-              name="name"
               placeholder="Product name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
             />
+
             <Input
-              name="price"
               placeholder="Price"
               type="number"
               value={price}
@@ -123,13 +114,14 @@ export default function ProductsClient({
               required
             />
 
+            {/* IMAGE URL INPUT */}
             <Input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              required
+              placeholder="Image URL (https://...)"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
             />
 
+            {/* CATEGORY */}
             <Select
               value={selectedCategory}
               onValueChange={(value) => setSelectedCategory(value)}
@@ -146,18 +138,21 @@ export default function ProductsClient({
               </SelectContent>
             </Select>
 
+            {/* SUBMIT BUTTON WITH LOADER */}
             <Button
               type="submit"
+              disabled={loading}
               className="col-span-1 sm:col-span-2 lg:col-span-1 mt-2 sm:mt-0"
             >
-              Add Product
+              {loading ? "Adding..." : "Add Product"}
             </Button>
           </form>
 
-          {imageBase64 && (
+          {/* LIVE PREVIEW */}
+          {imageUrl && (
             <div className="mt-4 flex justify-center">
               <img
-                src={imageBase64}
+                src={imageUrl}
                 alt="Preview"
                 className="w-40 h-40 object-cover rounded-lg shadow-md"
               />
@@ -166,7 +161,7 @@ export default function ProductsClient({
         </CardContent>
       </Card>
 
-      {/* === Product List === */}
+      {/* PRODUCTS LIST */}
       <div
         className="
           grid gap-6
@@ -206,6 +201,7 @@ export default function ProductsClient({
                 {p.name}
               </CardTitle>
             </CardHeader>
+
             <CardContent className="space-y-3 text-center pb-5">
               <p className="text-base font-medium text-foreground">
                 💰 {p.price.toLocaleString()} so‘m
@@ -248,4 +244,3 @@ export default function ProductsClient({
     </div>
   );
 }
-    

@@ -3,13 +3,11 @@
 import { dbConnect } from "@/lib/db";
 import Product from "@/models/Product";
 
-export async function getProducts(limit = 8, skip = 0) {
+export async function getProducts() {
   await dbConnect();
 
   const products = await Product.find({}, "name price image available category")
     .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
     .populate("category", "name") // faqat name maydonini oladi
     .lean();
   return JSON.parse(JSON.stringify(products));

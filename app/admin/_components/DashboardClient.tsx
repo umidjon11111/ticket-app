@@ -44,17 +44,6 @@ export default function DashboardClient({ stats }: { stats: any }) {
             <div className="text-3xl font-bold">{stats.categoryCount}</div>
           </CardContent>
         </Card>
-
-        <Card className="hover:shadow-md transition-all border-red-200">
-          <CardHeader>
-            <CardTitle>🗑️ Bugungi karzina</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-red-600">
-              {stats.todayKarzina}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

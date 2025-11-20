@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 // 🧩 Model (agar oldin yaratilmagan bo‘lsa)
-const KarzinaSchema = new mongoose.Schema(
+const MothKarzinaSchema = new mongoose.Schema(
   {
     orderId: Number,
     status: String,
@@ -19,11 +19,12 @@ const KarzinaSchema = new mongoose.Schema(
     },
     deletedAt: { type: Date, default: Date.now },
   },
-  { collection: "karzina" }
+  { collection: "MothKarzina" }
 );
 
 // Bir xil model ikki marta yaratilmasligi uchun tekshiramiz
-const Karzina =
-  mongoose.models.Karzina || mongoose.model("Karzina", KarzinaSchema);
+const MothKarzina =
+  mongoose.models.MothKarzina ||
+  mongoose.model("MothKarzina", MothKarzinaSchema);
 
-export default Karzina;
+export default MothKarzina;

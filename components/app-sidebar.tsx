@@ -36,9 +36,10 @@ const data = {
       url: "/admin/category",
       icon: Cable,
     },
+
     {
-      title: "Karzina",
-      url: "/admin/orders",
+      title: "Karzina Oylik",
+      url: "/admin/orders-moth",
       icon: AudioWaveform,
     },
   ],
