@@ -1,6 +1,7 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { initSocket } from "@/lib/socket";
+import { getSocket } from "@/lib/socket"; //  ✔ initSocket emas!
 import { Button } from "@/components/ui/button";
 import { Maximize2, Minimize2 } from "lucide-react";
 
@@ -12,7 +13,7 @@ interface Order {
   items: { name: string; qty: number; price: number }[];
 }
 
-// 🔢 Raqamni so‘zga aylantirish
+// 🔢 Raqamni so‘zga aylantirish (Uzbek)
 function numberToUzbekWords(num: number): string {
   const ones = [
     "",
@@ -42,6 +43,7 @@ function numberToUzbekWords(num: number): string {
   if (num < 10) return ones[num];
   if (num < 100)
     return `${tens[Math.floor(num / 10)]} ${ones[num % 10]}`.trim();
+
   if (num < 1000) {
     const hundred = Math.floor(num / 100);
     const rest = num % 100;
@@ -49,6 +51,7 @@ function numberToUzbekWords(num: number): string {
       rest > 0 ? numberToUzbekWords(rest) : ""
     }`.trim();
   }
+
   return num.toString();
 }
 
@@ -59,55 +62,67 @@ export default function Ekran() {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // 🔊 Ovoz
+  // 🔊 Ovoz chiqazish
   const playVoice = (text: string) => {
     if (!voiceEnabled) return;
+
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "tr-TR";
     utter.rate = 0.9;
+
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter);
   };
 
   useEffect(() => {
-    const socket = initSocket("ekran"); // ekran xonasi
+    const socket = getSocket();
 
-    socket.on("connect", () => setOnline(true));
-    socket.on("disconnect", () => setOnline(false));
+    // Join specific room
+    socket.emit("join_room", "ekran");
 
-    // 🔵 Barcha zakazlar keladi — faqat ZAL filtrlab olamiz
-    socket.on("all_orders", (data: Order[]) => {
-      const zalOrders = data.filter((o) => o.OrderType === "Zal");
+    // ONLINE HANDLING
+    if (socket.connected) setOnline(true);
 
-      setInProgress(zalOrders.filter((o) => o.status === "in_progress"));
-      setDoneOrders(zalOrders.filter((o) => o.status === "done"));
-    });
+    const onConnect = () => setOnline(true);
+    const onDisconnect = () => setOnline(false);
 
-    // 🆕 Yangi zakaz — faqat ZAL bo‘lsa
-    socket.on("new_order", (order: Order) => {
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+
+    // 🔵 Barcha zakazlar
+    const onAll = (data: Order[]) => {
+      const zal = data.filter((o) => o.OrderType === "Zal");
+
+      setInProgress(zal.filter((o) => o.status === "in_progress"));
+      setDoneOrders(zal.filter((o) => o.status === "done"));
+    };
+
+    // 🆕 Yangi zakaz
+    const onNew = (order: Order) => {
       if (order.OrderType !== "Zal") return;
       if (order.status === "in_progress") {
         setInProgress((prev) => [order, ...prev]);
       }
-    });
+    };
 
-    // 🟡 Status yangilansa — faqat ZAL bo‘lsa
-    socket.on("order_updated", (updated: Order) => {
+    // 🟡 Yangilanish
+    const onUpdate = (updated: Order) => {
       if (updated.OrderType !== "Zal") return;
 
       if (updated.status === "in_progress") {
-        setInProgress((prev) => {
-          const exists = prev.find((o) => o.orderId === updated.orderId);
-          if (exists)
-            return prev.map((o) =>
-              o.orderId === updated.orderId ? updated : o
-            );
-
-          return [updated, ...prev];
-        });
+        // done bo'lgan bo‘lsa qayta in_progress ga o'tdi
         setDoneOrders((prev) =>
           prev.filter((o) => o.orderId !== updated.orderId)
         );
+
+        setInProgress((prev) => {
+          const exist = prev.find((x) => x.orderId === updated.orderId);
+          if (exist)
+            return prev.map((x) =>
+              x.orderId === updated.orderId ? updated : x
+            );
+          return [updated, ...prev];
+        });
       }
 
       if (updated.status === "done") {
@@ -119,21 +134,31 @@ export default function Ekran() {
         const words = numberToUzbekWords(updated.orderId);
         playVoice(`Zakaz ${words} tayyor bo‘ldi`);
       }
-    });
+    };
 
-    // 🗑 O‘chirilgan ZAL zakazlari
-    socket.on("order_deleted", (orderId: number) => {
-      setInProgress((prev) => prev.filter((o) => o.orderId !== orderId));
-      setDoneOrders((prev) => prev.filter((o) => o.orderId !== orderId));
-    });
+    // 🗑 Delete event
+    const onDelete = (orderId: number) => {
+      setInProgress((p) => p.filter((x) => x.orderId !== orderId));
+      setDoneOrders((p) => p.filter((x) => x.orderId !== orderId));
+    };
 
+    // ➕ Listenerlar
+    socket.on("all_orders", onAll);
+    socket.on("new_order", onNew);
+    socket.on("order_updated", onUpdate);
+    socket.on("order_deleted", onDelete);
+
+    // Cleanup
     return () => {
-      socket.off("all_orders");
-      socket.off("new_order");
-      socket.off("order_updated");
-      socket.off("order_deleted");
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("all_orders", onAll);
+      socket.off("new_order", onNew);
+      socket.off("order_updated", onUpdate);
+      socket.off("order_deleted", onDelete);
     };
   }, [voiceEnabled]);
+
   const toggleFullscreen = async () => {
     try {
       if (!document.fullscreenElement) {
@@ -147,17 +172,21 @@ export default function Ekran() {
       console.error("Fullscreen xatosi:", err);
     }
   };
+
   return (
     <main className="min-h-screen bg-gray-100 p-4">
+      {/* HEADER */}
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-orange-600">
           🍽️ Sakura Ekrani — ZAL
         </h1>
-        <div>
+
+        <div className="flex items-center gap-3">
           <span className={online ? "text-green-600" : "text-red-500"}>
             {online ? "🟢 Online" : "🔴 Offline"}
           </span>
-          {/* 🔊 Ovoz tugmasi */}{" "}
+
+          {/* OVOZ TUGMASI */}
           {!voiceEnabled ? (
             <button
               onClick={() => {
@@ -166,8 +195,7 @@ export default function Ekran() {
               }}
               className="bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600"
             >
-              {" "}
-              🔊 Ovoz yoqish{" "}
+              🔊 Ovoz yoqish
             </button>
           ) : (
             <button
@@ -177,39 +205,28 @@ export default function Ekran() {
               }}
               className="bg-gray-300 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-400"
             >
-              {" "}
-              🔇 Ovoz o‘chirish{" "}
+              🔇 Ovoz o‘chirish
             </button>
-          )}{" "}
-          {/* 🖥️ Fullscreen tugmasi */}{" "}
-          <Button
-            variant="outline"
-            onClick={toggleFullscreen}
-            title={
-              isFullscreen
-                ? "Chiqish (Fullscreen rejimdan)"
-                : "Fullscreen rejimga o‘tish"
-            }
-          >
-            {" "}
+          )}
+
+          {/* FULLSCREEN */}
+          <Button variant="outline" onClick={toggleFullscreen}>
             {isFullscreen ? (
               <>
-                {" "}
-                <Minimize2 className="w-4 h-4 mr-2" /> Chiqish{" "}
+                <Minimize2 className="w-4 h-4 mr-2" /> Chiqish
               </>
             ) : (
               <>
-                {" "}
-                <Maximize2 className="w-4 h-4 mr-2" /> Fullscreen{" "}
+                <Maximize2 className="w-4 h-4 mr-2" /> Fullscreen
               </>
-            )}{" "}
+            )}
           </Button>
         </div>
       </header>
 
-      {/* --- UI --- */}
+      {/* 2 TA BLOK */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* In Progress */}
+        {/* IN PROGRESS */}
         <div className="bg-white shadow p-4 rounded">
           <h2 className="text-lg font-bold text-yellow-600">
             🧑‍🍳 Tayyorlanayotgan
@@ -222,7 +239,7 @@ export default function Ekran() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
             {inProgress.map((o) => (
               <div key={o._id} className="p-3 bg-yellow-50 border rounded">
-                <h3 className="font-bold">#{o.orderId}</h3>
+                <h3 className="font-bold text-lg">#{o.orderId}</h3>
                 {o.items.map((i, idx) => (
                   <p key={idx}>
                     {i.name} × {i.qty}
@@ -233,7 +250,7 @@ export default function Ekran() {
           </div>
         </div>
 
-        {/* Done */}
+        {/* DONE */}
         <div className="bg-white shadow p-4 rounded">
           <h2 className="text-lg font-bold text-green-600">✅ Tayyor</h2>
 
@@ -244,7 +261,7 @@ export default function Ekran() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
             {doneOrders.map((o) => (
               <div key={o._id} className="p-3 bg-green-50 border rounded">
-                <h3 className="font-bold">#{o.orderId}</h3>
+                <h3 className="font-bold text-lg">#{o.orderId}</h3>
                 {o.items.map((i, idx) => (
                   <p key={idx}>
                     {i.name} × {i.qty}

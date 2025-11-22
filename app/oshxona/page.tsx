@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { initSocket } from "@/lib/socket";
+import { getSocket } from "@/lib/socket";
 import { Button } from "@/components/ui/button";
 import { Maximize2, Minimize2 } from "lucide-react";
 
@@ -14,37 +14,53 @@ export default function KitchenPage() {
   const [saboyOrders, setSaboyOrders] = useState<any[]>([]);
 
   useEffect(() => {
-    const socket = initSocket("oshxona");
+    const socket = getSocket();
 
-    socket.on("connect", () => setOnline(true));
-    socket.on("disconnect", () => setOnline(false));
+    // ROOM JOIN
+    socket.emit("join_room", "oshxona");
 
-    socket.on("all_orders", (data: any[]) => {
+    // ONLINE STATUS
+    if (socket.connected) setOnline(true);
+
+    const onConnect = () => setOnline(true);
+    const onDisconnect = () => setOnline(false);
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+
+    // ALL ORDERS
+    const onAll = (data: any[]) => {
       const filtered = data.filter((o) => o.status === "in_progress");
       categorize(filtered);
-    });
+    };
 
-    socket.on("new_order", (order: any) => {
-      if (order.status === "in_progress") {
-        if (order.OrderType === "Zal") setZalOrders((p) => [order, ...p]);
-        if (order.OrderType === "Dastavka")
-          setDastavkaOrders((p) => [order, ...p]);
-        if (order.OrderType === "Saboy") setSaboyOrders((p) => [order, ...p]);
-      }
-    });
+    const onNew = (order: any) => {
+      if (order.status !== "in_progress") return;
 
-    socket.on("order_updated", (updated: any) => {
+      if (order.OrderType === "Zal") setZalOrders((p) => [order, ...p]);
+      if (order.OrderType === "Dastavka")
+        setDastavkaOrders((p) => [order, ...p]);
+      if (order.OrderType === "Saboy") setSaboyOrders((p) => [order, ...p]);
+    };
+
+    const onUpdate = (updated: any) => {
       if (updated.status !== "in_progress") {
         removeFromAll(updated.orderId);
         return;
       }
       updateOrder(updated);
-    });
+    };
+
+    socket.on("all_orders", onAll);
+    socket.on("new_order", onNew);
+    socket.on("order_updated", onUpdate);
 
     return () => {
-      socket.off("all_orders");
-      socket.off("new_order");
-      socket.off("order_updated");
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("all_orders", onAll);
+      socket.off("new_order", onNew);
+      socket.off("order_updated", onUpdate);
     };
   }, []);
 
@@ -102,7 +118,7 @@ export default function KitchenPage() {
       <p className="mt-3 font-semibold">
         Jami:{" "}
         {o.items
-          .reduce((sum: number, i: any) => sum + i.qty * i.price, 0)
+          .reduce((sum: any, i: any) => sum + i.qty * i.price, 0)
           .toLocaleString()}{" "}
         so‘m
       </p>
@@ -135,9 +151,9 @@ export default function KitchenPage() {
         </Button>
       </div>
 
-      {/* 3ta bo‘lim — BORDER bilan qat'iy ajratilgan */}
+      {/* 3ta bo‘lim */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-        {/* ZAL BLOCK */}
+        {/* ZAL */}
         <div className="border-2 border-blue-400 rounded-xl p-4 bg-white shadow-lg">
           <h2 className="text-xl font-bold text-blue-600 border-b pb-2 mb-3">
             🟦 Zal
@@ -151,7 +167,7 @@ export default function KitchenPage() {
           </div>
         </div>
 
-        {/* DASTAVKA BLOCK */}
+        {/* DASTAVKA */}
         <div className="border-2 border-green-400 rounded-xl p-4 bg-white shadow-lg">
           <h2 className="text-xl font-bold text-green-600 border-b pb-2 mb-3">
             🟩 Dastavka
@@ -165,7 +181,7 @@ export default function KitchenPage() {
           </div>
         </div>
 
-        {/* SABOY BLOCK */}
+        {/* SABOY */}
         <div className="border-2 border-orange-400 rounded-xl p-4 bg-white shadow-lg">
           <h2 className="text-xl font-bold text-orange-600 border-b pb-2 mb-3">
             🟧 Saboy
