@@ -199,11 +199,12 @@ export default function CreateOrderClient({
               className="p-5 border rounded-xl shadow-lg cursor-pointer bg-white hover:bg-gray-50"
             >
               <Image
-                src={p.image || "/noimg.png"}
+                src={p.image || ""}
                 alt={p.name}
                 width={150}
                 height={150}
-                className="rounded-lg mx-auto"
+                className="rounded-lg mx-auto h-40 w-40 object-center"
+                sizes="cover"
               />
               <h3 className="mt-3 text-center font-semibold text-xl">
                 {p.name}
