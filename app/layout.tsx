@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers/providers";
 import CookieWrapper from "@/components/providers/CookiesProvider";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,6 +37,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
+          <NextTopLoader showSpinner={false} />
           <CookieWrapper>{children}</CookieWrapper>
         </Providers>
       </body>

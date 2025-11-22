@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getSocket, initSocket } from "@/lib/socket";
+import { getSocket } from "@/lib/socket";
 
 // ============ ✅ DAILY REPORT TYPE ============
 interface OrderTypeStats {
@@ -52,7 +52,7 @@ export default function Navbar() {
 
   const [report, setReport] = useState<Report | null>(null);
   const [open, setOpen] = useState(false);
-  const socket = getSocket() || initSocket("kassa");
+  const socket = getSocket();
 
   const loadReport = async () => {
     const res = await fetch("/api/daily-report");
