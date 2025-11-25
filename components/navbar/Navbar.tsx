@@ -50,6 +50,10 @@ export default function Navbar() {
 
   const [report, setReport] = useState<Report | null>(null);
   const [open, setOpen] = useState(false);
+
+  // 🔥 modalni qayta render qilish uchun trigger
+  const [modalRefresh, setModalRefresh] = useState(0);
+
   const socket = getSocket();
 
   const loadReport = async () => {
@@ -58,15 +62,14 @@ export default function Navbar() {
     setReport(data);
   };
 
-  // ================================
-  // 🔥 REAL-TIME HISOBOT LISTENER
-  // ================================
+  // REAL-TIME HISOBOT LISTENER
   useEffect(() => {
     loadReport();
 
     socket.on("daily_report_closed", (msg) => {
       console.log("📡 Real-time hisobot keldi:", msg);
-      loadReport(); // UI avtomatik yangilanadi
+      loadReport();
+      setModalRefresh(Date.now()); // 🔥 modal uchun re-render
     });
 
     return () => {
@@ -77,10 +80,8 @@ export default function Navbar() {
   const sendDailyReport = async () => {
     if (!report) return;
 
-    // Printerga yuborish
     socket.emit("printer_kunlik_check", report);
 
-    // Kunni yopish API
     const res = await fetch("/api/close-day", { method: "POST" });
     const result = await res.json();
 
@@ -93,19 +94,12 @@ export default function Navbar() {
   return (
     <div className="flex justify-center w-full">
       <div className="flex w-full mx-2 mt-2 gap-3">
-        {/* MAIN PAGES */}
         {pages.map((p) => (
           <Link key={p.name} href={p.href} className="w-full">
             <Card
-              className="
-                flex flex-col items-center justify-center gap-1 
-                bg-white rounded-xl py-4 px-2 
-                shadow-md border
-                hover:shadow-lg 
-                active:scale-[0.97] 
-                transition cursor-pointer
-                text-center
-              "
+              className="flex flex-col items-center justify-center gap-1 
+              bg-white rounded-xl py-4 px-2 shadow-md border hover:shadow-lg 
+              active:scale-[0.97] transition cursor-pointer text-center"
             >
               <p.icon size={32} className="text-gray-700" />
               <span className="text-[15px] font-medium">{p.name}</span>
@@ -113,24 +107,21 @@ export default function Navbar() {
           </Link>
         ))}
 
-        {/* HISOBOT RED CARD */}
+        {/* HISOBOT */}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Card
-              className="
-                flex flex-col items-center justify-center gap-1 
-                bg-red-500 text-white rounded-xl py-4 px-2
-                shadow-md hover:bg-red-600 
-                active:scale-[0.97] transition cursor-pointer
-                text-center w-full
-              "
+              className="flex flex-col items-center justify-center gap-1 
+              bg-red-500 text-white rounded-xl py-4 px-2 shadow-md 
+              hover:bg-red-600 active:scale-[0.97] transition cursor-pointer text-center w-full"
             >
               <FileChartColumn size={32} />
               <span className="text-[15px] font-medium">Hisobot</span>
             </Card>
           </DialogTrigger>
 
-          <DialogContent className="max-w-md">
+          {/* 🔥 key={modalRefresh} modalni real-time yangilab turadi */}
+          <DialogContent key={modalRefresh} className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold">
                 📊 Kunlik Hisobot
