@@ -64,15 +64,22 @@ export default function Navbar() {
 
   // REAL-TIME HISOBOT LISTENER
   useEffect(() => {
-    loadReport();
+    loadReport(); // bir marta yuklanadi
 
-    socket.on("daily_report_closed", (msg) => {
-      console.log("📡 Real-time hisobot keldi:", msg);
+    socket.on("daily_report_update", () => {
+      console.log("📡 Real-time update → daily report updated");
       loadReport();
-      setModalRefresh(Date.now()); // 🔥 modal uchun re-render
+      setModalRefresh(Date.now());
+    });
+
+    socket.on("daily_report_closed", () => {
+      console.log("📡 Report closed → refresh");
+      loadReport();
+      setModalRefresh(Date.now());
     });
 
     return () => {
+      socket.off("daily_report_update");
       socket.off("daily_report_closed");
     };
   }, []);
@@ -108,7 +115,13 @@ export default function Navbar() {
         ))}
 
         {/* HISOBOT */}
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+          open={open}
+          onOpenChange={(state) => {
+            setOpen(state);
+            if (state) loadReport(); // 🔥 MODAL OCHILGANDA DARHOL YANGILANADI
+          }}
+        >
           <DialogTrigger asChild>
             <Card
               className="flex flex-col items-center justify-center gap-1 
