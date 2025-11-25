@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { getSocket } from "@/lib/socket";
 
-// ============ ✅ DAILY REPORT TYPE ============
 interface OrderTypeStats {
   total: number;
   canceled: number;
@@ -34,7 +33,6 @@ interface Report {
   ordersCount: number;
   deliverySum: number;
   cash: number;
-
   types?: {
     Zal: OrderTypeStats;
     Dastavka: OrderTypeStats;
@@ -60,22 +58,35 @@ export default function Navbar() {
     setReport(data);
   };
 
+  // ================================
+  // 🔥 REAL-TIME HISOBOT LISTENER
+  // ================================
   useEffect(() => {
     loadReport();
+
+    socket.on("daily_report_closed", (msg) => {
+      console.log("📡 Real-time hisobot keldi:", msg);
+      loadReport(); // UI avtomatik yangilanadi
+    });
+
+    return () => {
+      socket.off("daily_report_closed");
+    };
   }, []);
 
   const sendDailyReport = async () => {
     if (!report) return;
 
+    // Printerga yuborish
     socket.emit("printer_kunlik_check", report);
 
+    // Kunni yopish API
     const res = await fetch("/api/close-day", { method: "POST" });
     const result = await res.json();
 
     if (result.ok) {
       alert("Kunlik hisob yakunlandi!");
       setOpen(false);
-      loadReport();
     }
   };
 
@@ -153,7 +164,6 @@ export default function Navbar() {
                   <div className="p-3 rounded-lg border bg-gray-50 space-y-2">
                     <p className="font-semibold">🔎 Yo‘nalishlar:</p>
 
-                    {/* Object.entries correct type */}
                     {Object.entries(report.types).map(([key, stats]) => (
                       <div
                         key={key}
