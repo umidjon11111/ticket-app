@@ -121,62 +121,63 @@ export default function Navbar() {
           </DialogTrigger>
 
           {/* 🔥 key={modalRefresh} modalni real-time yangilab turadi */}
-          <DialogContent key={modalRefresh} className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-semibold">
-                📊 Kunlik Hisobot
-              </DialogTitle>
-            </DialogHeader>
+          <DialogContent className="max-w-md">
+            <div key={modalRefresh}>
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold">
+                  📊 Kunlik Hisobot
+                </DialogTitle>
+              </DialogHeader>
 
-            {!report ? (
-              <p>Yuklanmoqda...</p>
-            ) : (
-              <div className="space-y-3 text-[16px]">
-                <p>
-                  <b>Sana:</b> {report.date}
-                </p>
-                <p>
-                  <b>Umumiy savdo:</b> {report.total} so‘m
-                </p>
-                <p>
-                  <b>Bekor:</b> {report.canceled} so‘m
-                </p>
-                <p>
-                  <b>Buyurtmalar:</b> {report.ordersCount} ta
-                </p>
-                <p>
-                  <b>Dastavka:</b> {report.deliverySum} so‘m
-                </p>
-                <p>
-                  <b>Naqd:</b> {report.cash} so‘m
-                </p>
+              {!report ? (
+                <p>Yuklanmoqda...</p>
+              ) : (
+                <div className="space-y-3 text-[16px]">
+                  <p>
+                    <b>Sana:</b> {report.date}
+                  </p>
+                  <p>
+                    <b>Umumiy savdo:</b> {report.total} so‘m
+                  </p>
+                  <p>
+                    <b>Bekor:</b> {report.canceled} so‘m
+                  </p>
+                  <p>
+                    <b>Buyurtmalar:</b> {report.ordersCount} ta
+                  </p>
+                  <p>
+                    <b>Dastavka:</b> {report.deliverySum} so‘m
+                  </p>
+                  <p>
+                    <b>Naqd:</b> {report.cash} so‘m
+                  </p>
 
-                {report.types && (
-                  <div className="p-3 rounded-lg border bg-gray-50 space-y-2">
-                    <p className="font-semibold">🔎 Yo‘nalishlar:</p>
+                  {report.types && (
+                    <div className="p-3 rounded-lg border bg-gray-50 space-y-2">
+                      <p className="font-semibold">🔎 Yo‘nalishlar:</p>
+                      {Object.entries(report.types).map(([key, stats]) => (
+                        <div
+                          key={key}
+                          className="flex justify-between text-[15px]"
+                        >
+                          <span>{key}:</span>
+                          <span>
+                            {stats.count} ta — {stats.total} so‘m
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                    {Object.entries(report.types).map(([key, stats]) => (
-                      <div
-                        key={key}
-                        className="flex justify-between text-[15px]"
-                      >
-                        <span>{key}:</span>
-                        <span>
-                          {stats.count} ta — {stats.total} so‘m
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <Button
-                  onClick={sendDailyReport}
-                  className="w-full py-5 text-[16px] bg-blue-600 hover:bg-blue-700"
-                >
-                  🖨 Printerga yuborish
-                </Button>
-              </div>
-            )}
+                  <Button
+                    onClick={sendDailyReport}
+                    className="w-full py-5 text-[16px] bg-blue-600 hover:bg-blue-700"
+                  >
+                    🖨 Printerga yuborish
+                  </Button>
+                </div>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </div>
