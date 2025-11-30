@@ -1,7 +1,7 @@
 // lib/socket.ts
 import { io, Socket } from "socket.io-client";
 
-const URL = "https://sakura-socket-tr04.onrender.com";
+const URL = "";
 let socket: Socket | null = null;
 
 export function getSocket() {
